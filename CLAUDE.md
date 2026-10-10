@@ -5,6 +5,8 @@ Hackathon build. Hacking ends 8:00 PM PT; submit before then. First working vers
 ## What we're building
 An app for bank credit officers. It watches the companies a bank has lent money to and flags public signs of trouble before they show up in quarterly financials (which arrive 45–90 days after quarter end). Theme: catch what humans miss.
 
+Since 12:50 (Sense tester 1) we lead with screening a company before the bank lends (stage = applicant), and keep monitoring it after the loan (stage = borrower). Same checks, two moments. See docs/PLAN.md §0.
+
 Target borrowers are mid-size PRIVATE companies: no analyst coverage, quarterly financials only. That is the whole point of the product.
 
 ## Stack
@@ -70,7 +72,7 @@ refreshBorrower(borrower_id):
 3. Replaces that borrower's Signals.
 4. Applies the status rules and saves.
 
-Screens read stored data only. Only the Refresh button calls Bright Data live, so the demo stays fast.
+Screens read stored data only. Only the Refresh button and "Screen new applicant" call Bright Data live, so the demo stays fast.
 
 ## Git rules
 - `main` = what Base44 shows = the demo. Only merge code that runs. Merging to main syncs to Base44.
