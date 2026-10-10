@@ -25,11 +25,12 @@ Do not edit files owned by another role without asking in chat first.
 ## Data contract (do not change without telling the whole team)
 Borrower:
 - name, website_domain, hq_city, hq_state, industry
-- loan_amount_usd (fictional), linkedin_url, glassdoor_url
+- stage: applicant | borrower (default borrower)
+- loan_amount_usd (fictional; for applicants it is the requested amount), linkedin_url, glassdoor_url
 - status: green | yellow | red
 - why: one-line string
-- last_refreshed: ISO timestamp
-- sources_unavailable: list of strings
+- last_refreshed: ISO timestamp, empty until the first refresh
+- sources_unavailable: list of strings, only these values: News | Legal | Jobs | Reviews
 
 Signal:
 - borrower_id
@@ -65,7 +66,7 @@ Build the "why" line from the rules, e.g. "Red: CFO departure (Sep 12) + job pos
 ## Refresh flow
 refreshBorrower(borrower_id):
 1. Runs all 4 signal functions.
-2. Skips any source that fails and adds it to sources_unavailable.
+2. Skips any source that fails and adds its name to sources_unavailable (exec_departure → News, legal_layoffs → Legal, hiring_drop → Jobs, review_distress → Reviews).
 3. Replaces that borrower's Signals.
 4. Applies the status rules and saves.
 
