@@ -179,6 +179,33 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 
 **Sponsor add-ons** (Devin, Clerk, MongoDB, Daytona) are optional and only after M2: see `docs/SPONSOR_ADDONS.md`.
 
+## 7b. Agentic setup (how the four of us work with agents)
+
+Every person runs **one Claude Code session in this repo**. That's the harness. Everything else plugs into it.
+
+| Layer | What | Who |
+|---|---|---|
+| **Main agent** | Claude Code started in the repo folder. It auto-loads `CLAUDE.md` (rules + contract). Its first message is the role prompt from the kickoff message | All 4 |
+| **Shared memory** | `CLAUDE.md` (rules), `docs/PLAN.md` (tasks), `docs/USER_FEEDBACK.md` (tester evidence). Agents read these instead of chat history, so **put decisions in the files**, not only in chat | All 4 |
+| **MCP tools** | **Bright Data** (scouting, dataset lookup, test calls) · **Base44** (drive the Base44 builder AI, read/edit app files, entities, preview/deploy) · **Sense** (P4 only launches) · MongoDB plugin (only if the add-on is used) | See below |
+| **Subagents** | Inside your own session, hand side jobs to subagents so your main thread keeps building. For example, P3 has one subagent look up the Glassdoor dataset while the main thread writes scoring tests | All 4 |
+| **Devin** (Cognition prize) | One **background worker** on a single well-scoped task, on its own branch `devin/...`, opened as a PR for P1. Candidates: the `scoreBorrower` test suite (P3) or the Glassdoor collector (P3). Never on the critical path | P3 starts it |
+| **Base44 builder AI** | P1 describes screens in plain words through the Base44 MCP (`edit_base44_app`). The builder writes the UI. P1 checks the preview and deploys | P1 |
+| **Git** | Branch per lane (`ui/`, `news/`, `jobs/`, `research/`, `devin/`). P1 merges. Base44 syncs both ways with `main` | All 4 |
+
+**Tools by role:**
+- **P1 App:** Base44 MCP (builder AI + entities + deploy) · Bright Data MCP (only to sanity-check the secret works)
+- **P2 News:** Bright Data MCP (`search_engine` to try queries, `scrape_as_markdown` to fetch article text for snippets) · Base44 MCP (read/edit backend function files)
+- **P3 Jobs & reviews:** Bright Data MCP (`search_scrapers` → `get_scraper_details` → `run_scraper` → `get_scraper_results` to find datasets and time a snapshot) · Base44 MCP · Devin
+- **P4 Research:** Sense MCP (launch, status, results) · Bright Data MCP (find and verify demo companies) · GitHub (feedback log, demo script)
+
+**Agent rules (on top of `CLAUDE.md`):**
+1. **One writer per file.** Agents only edit their lane's files. If an agent needs a change elsewhere, it writes the request in chat for that owner.
+2. **No live edits during a Base44 builder turn.** While the Base44 app status is `processing`, nobody edits app files directly; both sides write to the same tree.
+3. **Verify before you push.** Agents run the function on one real company and paste the output in their PR. "It should work" doesn't get merged.
+4. **Secrets check before every commit:** `git diff --cached` must show no key values. Search it for our key prefixes (`ssk_`, `dtn_`, `al-`, `sk_`) and the Bright Data key from chat. Keys only live in Base44 secrets or `.env`.
+5. **Escalate fast.** If an agent is stuck on the same error twice, the human posts it in chat. Don't let it loop for 20 minutes.
+
 ## 8. Lookups (fill in as we find them)
 
 | What | Value | Found by |
