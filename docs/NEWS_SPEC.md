@@ -55,3 +55,11 @@ Drop the tag unless `snippet` is an exact substring of the source text after col
    Devin is a coding agent, not a per-item LLM, so it is not used for tagging.
 2. **Base44 access.** P2's account can't open app `6aca96c9744d6ba75bc4fabd` yet; P1 must invite us before we deploy.
 3. **Runtime.** Base44 functions run on Deno. Locally: Deno (`brew install deno`) or Node 26.
+
+## Future: LinkedIn people check (not started; needs team OK, it adds a signal type)
+
+- **Exec moves:** pull the CEO/CFO/founder profiles from the borrower's LinkedIn company page (Bright Data LinkedIn
+  people dataset). If a profile's current employer is no longer the borrower, that is an executive departure, often
+  visible before any news story. Dedupe against news `exec_departure` by person name.
+- **Headcount:** record the company page's employee count on each refresh; a sustained drop is a weak signal.
+- Source link on every signal = the LinkedIn profile or company page.

@@ -127,6 +127,7 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 - [ ] **by 2:30** `tagItem` reusable by P3 (review text in, same JSON out)
 - [ ] **after 3 (stretch) Stacking check feasibility, 20 min:** can we find **new lenders or liens** (UCC filings, lender lawsuits, merchant cash advances) for a test company through Bright Data, either from news or a state UCC search page? If yes, propose a signal type `lender_liens` (additive contract change; tell the team). If no, P4 puts it in the pitch as the next step
 - [ ] **after 3** Timeouts/retry, cache tags by `source_url` so refresh doesn't re-tag
+- [ ] **future (needs team OK, new signal type)** **LinkedIn people check** via Bright Data LinkedIn company + people datasets: (a) a CEO/CFO/founder's profile shows a new employer = executive left, often before any news; (b) company employee count falling over time = headcount drop. Overlaps `exec_departure`, so dedupe against news
 
 ### P3: Jobs & reviews (`jobs/`): Web Scraper API + scoring
 - [ ] **now** `scoreBorrower` + why line first. It's pure code and testable without any API, so write the test cases from §2 first
