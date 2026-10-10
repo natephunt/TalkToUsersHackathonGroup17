@@ -5,42 +5,51 @@
 <title>News Signals Console</title>
 <style>
   body { font: 14px/1.45 -apple-system, system-ui, sans-serif; margin: 24px; color: #1a1f2b; background: #f6f7f9; }
-  h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 24px 0 8px; }
+  h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 20px 0 8px; }
   .muted { color: #667; font-size: 12px; }
   form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; background: #fff; padding: 12px; border: 1px solid #dde; }
   label { display: flex; flex-direction: column; font-size: 12px; color: #445; }
   input, select, button { font: inherit; padding: 5px 8px; border: 1px solid #bbc; border-radius: 3px; }
   button { background: #1d3a6b; color: #fff; border-color: #1d3a6b; cursor: pointer; }
+  .flow { display: flex; align-items: stretch; gap: 0; margin-top: 16px; flex-wrap: wrap; }
+  .stage { flex: 1; min-width: 150px; background: #fff; border: 1px solid #cfd4de; border-radius: 4px; padding: 10px 12px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .stage:hover { border-color: #1d3a6b; }
+  .stage.active { border: 2px solid #1d3a6b; background: #f0f4fb; }
+  .stage .n { font-size: 22px; font-weight: 600; }
+  .stage .t { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #445; }
+  .arrow { align-self: center; padding: 0 6px; color: #99a; font-size: 18px; }
   table { border-collapse: collapse; width: 100%; background: #fff; }
   th, td { border: 1px solid #e1e3ea; padding: 6px 8px; text-align: left; vertical-align: top; }
   th { background: #eef0f4; font-size: 12px; }
   .strong { color: #a11; font-weight: 600; } .weak { color: #a66b00; font-weight: 600; }
   .keep { color: #176b2c; font-weight: 600; } .drop { color: #889; }
-  pre { background: #fff; border: 1px solid #dde; padding: 8px; max-height: 300px; overflow: auto; font-size: 12px; }
+  pre { background: #f8f9fb; border: 1px solid #e1e3ea; padding: 6px; margin: 0; font-size: 11px; white-space: pre-wrap; }
   .err { color: #a11; font-weight: 600; }
 </style>
 </head>
 <body>
 <h1>News Signals Console</h1>
-<div class="muted">P2 local test page. Search (Bright Data) &rarr; tag &rarr; snippet guard &rarr; Signals. Not part of the app.</div>
+<div class="muted">P2 local test page, not part of the app. Click a stage to see its data.</div>
 
 <form id="f">
   <label>Company <select id="pick"><option value="">Custom...</option></select></label>
   <label>Name <input id="name" required></label>
   <label>Domain <input id="domain"></label>
   <label>HQ city <input id="city"></label>
-  <label>Tagger <select id="tagger"><option value="gemini">gemini (seconds)</option><option value="rules">rules (instant)</option><option value="devin">devin (minutes)</option></select></label>
-  <label>Data <select id="live"><option value="0">saved fixture</option><option value="1">live Bright Data</option></select></label>
+  <label>Analyze with <select id="tagger"><option value="gemini">Gemini (seconds)</option><option value="rules">keyword rules (instant)</option><option value="devin">Devin (minutes)</option></select></label>
+  <label>Crawl <select id="live"><option value="0">saved results (free)</option><option value="1">live Bright Data</option></select></label>
   <button>Run</button>
 </form>
 <div id="status" class="muted" style="margin-top:8px"></div>
-
-<div id="out"></div>
+<div id="flow" class="flow"></div>
+<div id="detail"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let companies = [];
+const link = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+let companies = [], data = null, active = "signals";
+
 fetch("/companies").then((r) => r.json()).then((cs) => {
   companies = cs;
   for (const c of cs) $("pick").insertAdjacentHTML("beforeend", `<option value="${c.id}">${esc(c.name)}</option>`);
@@ -52,29 +61,73 @@ function fill() {
 }
 $("pick").onchange = fill;
 
+const CLEAN_REASONS = ["duplicate link", "older than 180 days"];
+const isCleanDrop = (r) => !r.tag && (CLEAN_REASONS.includes(r.reason) || r.reason.startsWith("unparsed date"));
+
+const STAGES = [
+  { id: "crawl", title: "1. Crawl", sub: "Bright Data Google News", count: (d) => d.batches.reduce((n, b) => n + b.items.length, 0) },
+  { id: "clean", title: "2. Clean", sub: "dedupe, dates, 180 days", count: (d) => d.trace.filter((r) => !isCleanDrop(r)).length },
+  { id: "analyze", title: "3. Analyze", sub: "", count: (d) => d.trace.filter((r) => r.tag && r.tag.relevant).length },
+  { id: "guard", title: "4. Verify", sub: "same company + exact quote", count: (d) => d.signals.length },
+  { id: "signals", title: "5. Signals", sub: "what the officer sees", count: (d) => d.signals.length },
+];
+
+function renderFlow() {
+  STAGES[2].sub = `${data.tagger} tags relevance + severity`;
+  $("flow").innerHTML = STAGES.map((s, i) => `${i ? '<div class="arrow">&rarr;</div>' : ""}
+    <button class="stage ${s.id === active ? "active" : ""}" data-id="${s.id}">
+      <div class="t">${s.title}</div><div class="n">${s.count(data)}</div><div class="muted">${esc(s.sub)}</div></button>`).join("");
+  for (const el of document.querySelectorAll(".stage")) el.onclick = () => { active = el.dataset.id; renderFlow(); renderDetail(); };
+}
+
+function renderDetail() {
+  const d = data;
+  let html = "";
+  if (active === "crawl") {
+    html = d.batches.map((b) => `<h2>${esc(b.type)} &middot; ${b.items.length} results</h2><div class="muted">Query: ${esc(b.query)}</div>
+      <table><tr><th>Raw date</th><th>Source</th><th>Title / description</th></tr>${b.items.map((i) =>
+        `<tr><td>${esc(i.date)}</td><td>${esc(i.source)}</td><td>${link(i.link, i.title)}<div class="muted">${esc(i.description)}</div></td></tr>`).join("")}</table>`).join("");
+  } else if (active === "clean") {
+    html = `<h2>Clean: ${d.trace.length} in, ${STAGES[1].count(d)} passed to analysis</h2>
+      <table><tr><th>Result</th><th>Query</th><th>Raw date</th><th>Parsed date</th><th>Title</th></tr>${d.trace.map((r) =>
+        `<tr><td class="${isCleanDrop(r) ? "drop" : "keep"}">${isCleanDrop(r) ? "drop: " + esc(r.reason) : "pass"}</td><td>${r.query_type}</td>
+        <td>${esc(r.item.date)}</td><td>${r.date ?? "?"}</td><td>${link(r.item.link, r.item.title)}</td></tr>`).join("")}</table>`;
+  } else if (active === "analyze") {
+    const rows = d.trace.filter((r) => r.tag);
+    html = `<h2>Analyze (${esc(d.tagger)}): ${rows.length} articles tagged, ${STAGES[2].count(d)} relevant</h2>
+      <table><tr><th>Relevant</th><th>Same co.</th><th>Type</th><th>Severity</th><th>Article</th><th>Model output</th></tr>${rows.map((r) =>
+        `<tr><td class="${r.tag.relevant ? "keep" : "drop"}">${r.tag.relevant ? "yes" : "no"}</td><td>${r.tag.same_company ? "yes" : "no"}</td>
+        <td>${esc(r.tag.signal_type ?? "")}</td><td class="${r.tag.severity ?? ""}">${esc(r.tag.severity ?? "")}</td>
+        <td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td>
+        <td><pre>${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`).join("")}</table>`;
+  } else if (active === "guard") {
+    const rows = d.trace.filter((r) => r.tag && r.tag.relevant);
+    html = `<h2>Verify: ${rows.length} relevant, ${d.signals.length} passed</h2>
+      <div class="muted">Kept only if same company and the snippet appears word for word in the article text.</div>
+      <table><tr><th>Result</th><th>Snippet from model</th><th>Article</th></tr>${rows.map((r) =>
+        `<tr><td class="${r.kept ? "keep" : "drop"}">${r.kept ? "KEEP" : "drop: " + esc(r.reason)}</td><td>&ldquo;${esc(r.tag.snippet)}&rdquo;</td>
+        <td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td></tr>`).join("")}</table>`;
+  } else {
+    html = `<h2>Signals (${d.signals.length})</h2>
+      <table><tr><th>Date</th><th>Type</th><th>Severity</th><th>Title / snippet</th><th>Source</th></tr>${d.signals.map((s) =>
+        `<tr><td>${s.date}</td><td>${s.type}</td><td class="${s.severity}">${s.severity}</td>
+        <td><b>${esc(s.title)}</b><br>&ldquo;${esc(s.snippet)}&rdquo;</td><td>${link(s.source_url, s.source_name)}</td></tr>`).join("") ||
+        '<tr><td colspan="5" class="muted">No signals.</td></tr>'}</table>`;
+  }
+  $("detail").innerHTML = html;
+}
+
 $("f").onsubmit = async (e) => {
   e.preventDefault();
-  const id = $("pick").value;
-  const company = { id, name: $("name").value, website_domain: $("domain").value, hq_city: $("city").value };
-  $("status").textContent = "Running... (live search ~20 s, Devin tagging several minutes)";
-  $("out").innerHTML = "";
+  const company = { id: $("pick").value, name: $("name").value, website_domain: $("domain").value, hq_city: $("city").value };
+  $("status").textContent = "Running... (live crawl ~20 s, Gemini ~10-20 s, Devin several minutes)";
+  $("flow").innerHTML = $("detail").innerHTML = "";
   const t = Date.now();
   const res = await fetch("/run", { method: "POST", body: JSON.stringify({ company, live: $("live").value === "1", tagger: $("tagger").value }) });
   const d = await res.json();
   if (d.error) { $("status").innerHTML = `<span class="err">Error: ${esc(d.error)}</span>`; return; }
-  $("status").textContent = `${d.live ? "Live" : "Fixture"} · tagger ${d.tagger} · search ${d.timings.search_s.toFixed(1)}s · tag ${d.timings.tag_s.toFixed(1)}s · total ${((Date.now() - t) / 1000).toFixed(1)}s`;
-
-  const sig = d.signals.map((s) => `<tr><td>${s.date}</td><td>${s.type}</td><td class="${s.severity}">${s.severity}</td>
-    <td><b>${esc(s.title)}</b><br>&ldquo;${esc(s.snippet)}&rdquo;</td><td><a href="${esc(s.source_url)}" target="_blank" rel="noopener">${esc(s.source_name)}</a></td></tr>`).join("");
-  const tr = d.trace.map((r) => `<tr><td class="${r.kept ? "keep" : "drop"}">${r.kept ? "KEEP" : "drop"}</td><td>${esc(r.reason)}</td><td>${r.query_type}</td><td>${r.date ?? esc(r.item.date)}</td>
-    <td><a href="${esc(r.item.link)}" target="_blank" rel="noopener">${esc(r.item.title)}</a><div class="muted">${esc(r.item.description)}</div></td>
-    <td><pre style="max-height:120px;margin:0">${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`).join("");
-  $("out").innerHTML = `
-    <h2>Signals (${d.signals.length})</h2>
-    <table><tr><th>Date</th><th>Type</th><th>Severity</th><th>Title / snippet</th><th>Source</th></tr>${sig || '<tr><td colspan="5" class="muted">No signals.</td></tr>'}</table>
-    <h2>Queries</h2><pre>${esc(JSON.stringify(d.queries, null, 1))}</pre>
-    <h2>Every article and why (${d.trace.length})</h2>
-    <table><tr><th></th><th>Reason</th><th>Query</th><th>Date</th><th>Article</th><th>Tag</th></tr>${tr}</table>`;
+  $("status").textContent = `Crawl ${d.live ? "live" : "saved"} ${d.timings.search_s.toFixed(1)}s · analyze ${d.timings.tag_s.toFixed(1)}s · total ${((Date.now() - t) / 1000).toFixed(1)}s`;
+  data = d; active = "signals"; renderFlow(); renderDetail();
 };
 </script>
 </body>

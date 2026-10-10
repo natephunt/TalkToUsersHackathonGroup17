@@ -22,7 +22,7 @@ Deno.serve({ port: 8044 }, async (req) => {
       const { signals, trace } = await newsSignalsFromBatches(b, batches, pickTagger(tagger), today);
       const t2 = performance.now();
       return Response.json({
-        borrower: b, live: useLive, tagger, queries: batches.map((x) => ({ type: x.type, query: x.query, count: x.items.length })),
+        borrower: b, live: useLive, tagger, queries: batches.map((x) => ({ type: x.type, query: x.query, count: x.items.length })), batches,
         timings: { search_s: (t1 - t0) / 1000, tag_s: (t2 - t1) / 1000 }, signals, trace,
       });
     } catch (e) {
