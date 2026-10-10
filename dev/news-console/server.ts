@@ -13,7 +13,8 @@ Deno.serve({ port: 8044 }, async (req) => {
       const { company, live, tagger } = await req.json() as { company: Borrower; live: boolean; tagger: string };
       const known = COMPANIES.find((c) => c.id === company.id);
       const b: Borrower = known ?? { ...company, id: company.id || company.name.toLowerCase().replace(/[^a-z0-9]+/g, "") };
-      const useLive = live || !known;
+      const hasFixture = await Deno.stat(`dev/fixtures/${b.id}.json`).then(() => true, () => false);
+      const useLive = live || !hasFixture;
       const t0 = performance.now();
       const batches = await loadBatches(b, useLive);
       const t1 = performance.now();
