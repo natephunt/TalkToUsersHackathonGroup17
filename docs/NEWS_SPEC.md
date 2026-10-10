@@ -50,11 +50,11 @@ Drop the tag unless `snippet` is an exact substring of the source text after col
 
 ## Open decisions
 
-1. **LLM for tagging.** Base44 app uses its built-in LLM. Locally we need one of: Claude/OpenAI key in `.env`,
-   or rule-based tagging (keywords + name/city match, snippet = article description) until a key arrives.
-   Devin is a coding agent, not a per-item LLM, so it is not used for tagging.
-2. **Base44 access.** P2's account can't open app `6aca96c9744d6ba75bc4fabd` yet; P1 must invite us before we deploy.
-3. **Runtime.** Base44 functions run on Deno. Locally: Deno (`brew install deno`) or Node 26.
+1. **Tagging.** Two taggers: `rules` (keywords, instant, no key) and `devin` (one Devin session tags all of a
+   borrower's articles via structured output; minutes, needs `DEVIN_API_KEY`). Known rules weakness: any mention of a
+   past bankruptcy counts as strong. The snippet guard runs on both.
+2. **Base44 access.** Needed to save Signals into the app.
+3. **Runtime.** Deno 2.9 (same as Base44). `deno task test`, `deno task news <id> [--live]`, `deno task console`.
 
 ## Future: LinkedIn people check (not started; needs team OK, it adds a signal type)
 
