@@ -23,7 +23,7 @@
 ### What it might change (pending testers 2–3)
 | Observation | Possible change | Decision |
 |---|---|---|
-| Red flags appeared **before** the loan (underwriting) | Also pitch it as a pre-loan screen, not only for monitoring | Wait for testers 2–3 |
+| Red flags appeared **before** the loan (underwriting) | Also pitch it as a pre-loan screen, not only for monitoring | **Adopted 12:50.** Added an Applicants tab + live "Screen new applicant", and we lead the pitch with it. Monitoring is kept as the Portfolio tab (see `docs/PLAN.md` §0) |
 | "Loans at many other banks" (stacking) | New signal: **new lender liens** (UCC filings) via search. `legal_layoffs` already searches "lien" | Wait for testers 2–3 |
 | The cost was **time** | Lead with how much faster it finds trouble, not only losses avoided | Wait for testers 2–3 |
 
