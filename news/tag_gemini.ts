@@ -11,6 +11,7 @@ const SCHEMA = {
         type: "object",
         properties: {
           id: { type: "integer" },
+          reason: { type: "string" },
           relevant: { type: "boolean" },
           same_company: { type: "boolean" },
           signal_type: { type: "string", enum: ["exec_departure", "legal_layoffs"], nullable: true },

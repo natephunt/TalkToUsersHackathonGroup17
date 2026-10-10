@@ -14,6 +14,7 @@ const TAG_SCHEMA = {
         type: "object",
         properties: {
           id: { type: "integer" },
+          reason: { type: "string" },
           relevant: { type: "boolean" },
           same_company: { type: "boolean" },
           signal_type: { type: ["string", "null"], enum: ["exec_departure", "legal_layoffs", "review_distress", null] },

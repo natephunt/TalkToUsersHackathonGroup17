@@ -39,6 +39,7 @@ export type Tag = {
   signal_type: SignalType | null;
   severity: Severity | null;
   snippet: string;
+  reason?: string; // the tagger's one-line explanation; shown in the console, never saved
 };
 
 // A tagger tags many items at once (Devin needs batching; rules don't care).

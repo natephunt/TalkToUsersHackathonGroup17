@@ -34,6 +34,12 @@
   .keep { color: #176b2c; font-weight: 600; } .drop { color: #889; }
   pre { background: #f8f9fb; border: 1px solid #e1e3ea; padding: 6px; margin: 0; font-size: 11px; white-space: pre-wrap; }
   .err { color: #a11; font-weight: 600; }
+  details.activity { margin-top: 12px; background: #fff; border: 1px solid #dde; }
+  details.activity summary { padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  #log { font: 12px/1.5 ui-monospace, Menlo, monospace; max-height: 260px; overflow: auto; padding: 0 12px 10px; margin: 0; }
+  #log div { white-space: pre-wrap; } #log .t { color: #99a; } #log .linkedin { color: #5b2a86; } #log .news { color: #1d3a6b; }
+  #log .keep { color: #176b2c; } #log .drop { color: #889; }
+  .why { font-style: italic; color: #445; }
 </style>
 </head>
 <body>
@@ -51,6 +57,7 @@
   <button class="run">Run</button>
 </form>
 <div id="status" class="muted" style="margin-top:8px"></div>
+<details class="activity" id="act" open><summary>Activity: what it's doing, step by step</summary><div id="log"></div></details>
 <div id="diagram"></div>
 <div id="detail"></div>
 
@@ -127,7 +134,7 @@ function renderDetail() {
     clean: () => `<h2>Clean: ${n.trace.length} in, ${NEWS[1].n()} passed to analysis</h2>` +
       table(["Result", "Query", "Raw date", "Parsed", "Title"], n.trace.map((r) => `<tr><td class="${cleanDrop(r) ? "drop" : "keep"}">${cleanDrop(r) ? "drop: " + esc(r.reason) : "pass"}</td><td>${r.query_type}</td><td>${esc(r.item.date)}</td><td>${r.date ?? "?"}</td><td>${link(r.item.link, r.item.title)}</td></tr>`)),
     analyze: () => `<h2>Analyze (${esc(D.tagger)}): ${n.trace.filter((r) => r.tag).length} tagged, ${NEWS[2].n()} relevant</h2>` +
-      table(["Relevant", "Same co.", "Type", "Severity", "Article", "Model output"], n.trace.filter((r) => r.tag).map((r) => `<tr><td class="${r.tag.relevant ? "keep" : "drop"}">${r.tag.relevant ? "yes" : "no"}</td><td>${r.tag.same_company ? "yes" : "no"}</td><td>${esc(r.tag.signal_type ?? "")}</td><td class="${r.tag.severity ?? ""}">${esc(r.tag.severity ?? "")}</td><td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td><td><pre>${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`)),
+      table(["Relevant", "Why (model's reasoning)", "Same co.", "Type", "Severity", "Article", "Model output"], n.trace.filter((r) => r.tag).map((r) => `<tr><td class="${r.tag.relevant ? "keep" : "drop"}">${r.tag.relevant ? "yes" : "no"}</td><td class="why">${esc(r.tag.reason ?? "")}</td><td>${r.tag.same_company ? "yes" : "no"}</td><td>${esc(r.tag.signal_type ?? "")}</td><td class="${r.tag.severity ?? ""}">${esc(r.tag.severity ?? "")}</td><td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td><td><pre>${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`)),
     verify: () => `<h2>Verify: kept only if same company and the quote is word for word in the article</h2>` +
       table(["Result", "Quote from model", "Article"], n.trace.filter((r) => r.tag?.relevant).map((r) => `<tr><td class="${r.kept ? "keep" : "drop"}">${r.kept ? "KEEP" : "drop: " + esc(r.reason)}</td><td>&ldquo;${esc(r.tag.snippet)}&rdquo;</td><td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td></tr>`)),
     execs: () => `<h2>Find execs</h2><div class="muted">Search: ${esc(l.run.exec_query)} &rarr; Gemini lists execs, each backed by an exact quote from a result.</div>` +
@@ -143,18 +150,44 @@ function renderDetail() {
   $("detail").innerHTML = (views[active] ?? views.signals)();
 }
 
+function addLog(e) {
+  const cls = e.msg.startsWith("KEEP") ? "keep" : e.msg.startsWith("drop") ? "drop" : "";
+  $("log").insertAdjacentHTML("beforeend", `<div><span class="t">${e.t.toFixed(1).padStart(5)}s</span> <span class="${e.lane}">[${e.lane}]</span> <span class="${cls}">${esc(e.msg)}</span></div>`);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
 $("f").onsubmit = async (e) => {
   e.preventDefault();
   const company = { id: $("pick").value, name: $("name").value, website_domain: $("domain").value, hq_city: $("city").value };
-  $("status").textContent = "Running... (live: news ~20 s, LinkedIn ~30-60 s)";
-  $("diagram").innerHTML = $("detail").innerHTML = "";
+  $("diagram").innerHTML = $("detail").innerHTML = $("log").innerHTML = "";
+  $("act").open = true;
   const t = Date.now();
-  const res = await fetch("/run", { method: "POST", body: JSON.stringify({ company, live: $("live").value === "1", tagger: $("tagger").value, linkedin: $("li").checked }) });
-  const d = await res.json();
-  if (d.error) { $("status").innerHTML = `<span class="err">Error: ${esc(d.error)}</span>`; return; }
-  const li = d.linkedin ? ` · LinkedIn ${d.linkedin.live ? "live" : "saved"} ${d.linkedin.seconds.toFixed(1)}s` : "";
-  $("status").textContent = `News ${d.live ? "live" : "saved"}: crawl ${d.news.timings.crawl_s.toFixed(1)}s, analyze ${d.news.timings.analyze_s.toFixed(1)}s${li} · total ${((Date.now() - t) / 1000).toFixed(1)}s`;
-  D = d; active = "signals"; renderDiagram(); renderDetail();
+  const tick = setInterval(() => { $("status").textContent = `Running... ${((Date.now() - t) / 1000).toFixed(0)}s (live: news ~20 s, LinkedIn ~30-60 s)`; }, 250);
+  try {
+    const res = await fetch("/run", { method: "POST", body: JSON.stringify({ company, live: $("live").value === "1", tagger: $("tagger").value, linkedin: $("li").checked }) });
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", d = null;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const ev = JSON.parse(buf.slice(0, i)); buf = buf.slice(i + 1);
+        if (ev.type === "log") addLog(ev);
+        else if (ev.type === "error") throw new Error(ev.error);
+        else if (ev.type === "result") d = ev;
+      }
+    }
+    clearInterval(tick);
+    if (!d) throw new Error("no result");
+    const li = d.linkedin ? ` · LinkedIn ${d.linkedin.live ? "live" : "saved"} ${d.linkedin.seconds.toFixed(1)}s` : "";
+    $("status").textContent = `Done in ${((Date.now() - t) / 1000).toFixed(1)}s · news ${d.live ? "live" : "saved"}: crawl ${d.news.timings.crawl_s.toFixed(1)}s, analyze ${d.news.timings.analyze_s.toFixed(1)}s${li}`;
+    D = d; active = "signals"; renderDiagram(); renderDetail();
+  } catch (err) {
+    clearInterval(tick);
+    $("status").innerHTML = `<span class="err">Error: ${esc(err.message)}</span>`;
+  }
 };
 </script>
 </body>

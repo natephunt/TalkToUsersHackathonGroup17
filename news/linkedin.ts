@@ -126,13 +126,24 @@ async function scrapeProfiles(urls: string[], key: string, timeoutMs = 120000): 
 }
 
 // Network part: everything we fetch, so it can be saved as a fixture and replayed for free.
-export async function crawlLinkedIn(b: Borrower, env: { key: string; zone: string; geminiKey: string }): Promise<LinkedInRun> {
+export async function crawlLinkedIn(
+  b: Borrower,
+  env: { key: string; zone: string; geminiKey: string },
+  log: (msg: string) => void = () => {},
+): Promise<LinkedInRun> {
   const exec_query = `"${b.name}" CEO CFO executive leadership`;
+  log(`A. Searching Google for leadership: ${exec_query}`);
   const exec_results = await searchWeb(exec_query, env);
+  log(`A. ${exec_results.length} results. Asking Gemini to pick out executives (each needs an exact quote)...`);
   const execs = await findExecs(b, exec_results, env.geminiKey);
+  log(`A. Executives: ${execs.map((e) => `${e.name} (${e.title})`).join("; ") || "none found"}`);
   const profile_hits = await Promise.all(execs.map(async (e) => {
     const direct = pickProfile(e.name, exec_results);
-    if (direct) return { exec: e.name, query: "(found in leadership search)", url: direct, results: [] };
+    if (direct) {
+      log(`B. ${e.name}: profile already in leadership results -> ${direct}`);
+      return { exec: e.name, query: "(found in leadership search)", url: direct, results: [] };
+    }
+    log(`B. ${e.name}: searching for LinkedIn profile...`);
     // Quoting both name and company returns generic company pages; quote only the name, then fall back to name alone.
     let query = `"${e.name}" ${b.name} linkedin`;
     let results = await searchWeb(query, env);
@@ -140,10 +151,14 @@ export async function crawlLinkedIn(b: Borrower, env: { key: string; zone: strin
       query = `"${e.name}" linkedin`;
       results = await searchWeb(query, env);
     }
-    return { exec: e.name, query, url: pickProfile(e.name, results), results };
+    const url = pickProfile(e.name, results);
+    log(`B. ${e.name}: ${url ?? "no profile found"}`);
+    return { exec: e.name, query, url, results };
   }));
   const urls = [...new Set(profile_hits.map((h) => h.url).filter((u): u is string => !!u))];
+  log(`C. Scraping ${urls.length} profile(s) with Bright Data LinkedIn people dataset...`);
   const profiles = await scrapeProfiles(urls, env.key);
+  for (const p of profiles) log(`C. ${p.name || p.url}: current employer "${p.current_company || "?"}", ${p.experience.length} dated roles${p.error ? ` (error: ${p.error})` : ""}`);
   return { exec_query, exec_results, execs, profile_hits, profiles };
 }
 

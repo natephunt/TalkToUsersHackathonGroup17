@@ -20,7 +20,7 @@ export function sameCompany(text: string, b: Borrower): boolean {
 }
 
 export function tagRules(text: string, b: Borrower, hint: SignalType): Tag {
-  const none: Tag = { relevant: false, same_company: sameCompany(text, b), signal_type: null, severity: null, snippet: "" };
+  const none: Tag = { relevant: false, same_company: sameCompany(text, b), signal_type: null, severity: null, snippet: "", reason: "no trigger keyword in any sentence" };
   const sents = sentences(text);
   const find = (re: RegExp, also?: RegExp) => sents.find((s) => re.test(s) && (!also || also.test(s)));
 
@@ -34,7 +34,7 @@ export function tagRules(text: string, b: Borrower, hint: SignalType): Tag {
     else if ((snippet = find(LEGAL_WEAK))) severity = "weak";
   }
   if (!severity || !snippet) return none;
-  return { relevant: true, same_company: none.same_company, signal_type: hint, severity, snippet };
+  return { relevant: true, same_company: none.same_company, signal_type: hint, severity, snippet, reason: `keyword match (${severity})` };
 }
 
 export const rulesTagger: Tagger = {
