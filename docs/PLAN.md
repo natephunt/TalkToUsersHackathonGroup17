@@ -16,7 +16,7 @@ the red flags were **loans at many other banks** and **small late payments to th
 | Before | Now |
 |---|---|
 | Watches companies a bank has **already lent to** | **Screens a company before the bank lends**, then keeps watching it after funding |
-| Borrower list only | Two tabs: **Applicants** (screen before approving) and **Portfolio** (monitor) |
+| Borrower list only | Two tabs: **Applicants** (screen before approving) and **Borrowers** (monitor) |
 | Everything pre-loaded, Refresh is the only live call | **"Screen new applicant"** is live in the demo. News arrives in seconds; jobs and reviews fill in as they arrive |
 | 4 signals | Same 4, plus a **stretch** "stacking" check (new lenders/liens) if a data source is feasible |
 
@@ -27,7 +27,7 @@ Unchanged: the 4 signal rules, the status rules, tagging-only LLM, snippet guard
 ```
  Base44 app (P1)
  ┌────────────────────────────────────────────────────────────────────────┐
- │ Tabs: Applicants | Portfolio   ·  Company detail (timeline)            │
+ │ Tabs: All | Applicants | Borrowers ·  Company detail (timeline)            │
  │ [Screen new applicant] form    ·  [Refresh] button                     │
  │      │ read only                              │ both call:             │
  │      ▼                                        ▼                        │
@@ -49,15 +49,15 @@ Unchanged: the 4 signal rules, the status rules, tagging-only LLM, snippet guard
 2. Within seconds, news signals appear. Job postings and reviews fill in a moment later. Status turns **Red**:
    *"Red: CFO departure (Sep 12) + job postings down 62% in 30 days."* They click a source link to the real article.
 3. The officer asks for cash-flow documents **before** spending a week on the deal (Tester 1's exact wish).
-4. Switch to **Portfolio**: the same checks keep running on companies already lent to; one has turned Yellow since funding.
+4. Switch to **Borrowers**: the same checks keep running on companies already lent to; one has turned Yellow since funding.
 
 ## 2. Base44 building blocks (P1 creates, everyone codes against them)
 
 ### Entities
 **Borrower:** `name`, `website_domain`, `hq_city`, `hq_state`, `industry`, `loan_amount_usd` (fictional; requested amount
-for applicants, outstanding for portfolio), `linkedin_url`, `glassdoor_url`, `status` (green | yellow | red), `why`,
+for applicants, outstanding for borrowers), `linkedin_url`, `glassdoor_url`, `status` (green | yellow | red), `why`,
 `last_refreshed` (ISO), `sources_unavailable` (string[]),
-**`stage` (applicant | portfolio)** ← *new, additive; tell the team*
+**`stage` (applicant | borrower, default borrower)** ← *in Base44 now*
 
 **Signal:** `borrower_id`, `type` (hiring_drop | review_distress | exec_departure | legal_layoffs), `severity` (strong | weak),
 `date` (YYYY-MM-DD), `title`, `snippet`, `source_name`, `source_url`
@@ -78,7 +78,7 @@ for applicants, outstanding for portfolio), `linkedin_url`, `glassdoor_url`, `st
 | `refreshAll` | P1 | none → refreshes all seeded companies | `refreshBorrower` |
 
 **Signal-function contract (from `CLAUDE.md`):** takes a Borrower and returns `Signal[]`. It **never** writes status.
-On failure it throws, with the source name in the message (`"serp"`, `"linkedin_jobs"`, `"indeed"`, `"glassdoor"`).
+On failure it throws, with the source name in the message (`News`, `Legal`, `Jobs`, `Reviews`: the only allowed `sources_unavailable` values).
 `refreshBorrower` catches the error, adds it to `sources_unavailable` and keeps going.
 
 ### Rules everyone must hold to
@@ -114,8 +114,8 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 
 ### P1: App (`ui/`): Base44 screens, entities, secrets, merges
 - [ ] **now** Create the Base44 app, the **Borrower** (with `stage`) and **Signal** entities and the `BRIGHTDATA_API_KEY` secret. Post the repo folder layout Base44 syncs in chat.
-- [ ] **now** Seed placeholder companies (2 applicants, 3 portfolio) plus a few fake Signals so the screens can be built immediately
-- [ ] **by 1:30** **Applicants | Portfolio** tabs (status color **and** text label, why line), company detail (timeline newest first, a clickable source on every row), Refresh button
+- [ ] **now** Seed placeholder companies (2 applicants, 3 borrowers) plus a few fake Signals so the screens can be built immediately
+- [ ] **by 1:30** **All | Applicants | Borrowers** tabs (status color **and** text label, why line), company detail (timeline newest first, a clickable source on every row), Refresh button
 - [ ] **by 2:30** **Screen new applicant** form → `screenApplicant`; `refreshBorrower` saves after each source so the screen fills in progressively; `refreshAll`
 - [ ] **by 3:00** Published URL working with real data → hand to P4 for sense check 2
 - [ ] **after 3** Applicant decision buttons (approve / ask for docs / decline), signal feedback, `sources_unavailable` banner, polish to look like a bank's internal tool
@@ -138,7 +138,7 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 ### P4: Research & pitch (`research/`): Sense, companies, feedback, demo, QA
 - [ ] **now** Sense check 1 results → `docs/USER_FEEDBACK.md` (in progress). Watch whether testers 2–3 also talk about pre-loan screening
 - [ ] **by 1:15** Pick the demo companies, all mid-size private with LinkedIn + Glassdoor pages:
-  **2 applicants** (one visibly in trouble, one clean), **3 portfolio** (one in trouble), plus **1 extra company for the live
+  **2 applicants** (one visibly in trouble, one clean), **3 borrowers** (one in trouble), plus **1 extra company for the live
   "Screen new applicant" moment**, verified beforehand so it reliably turns Yellow or Red. Hand the fields to P1
 - [ ] **by 3:00** Update the Sense product description to the pre-loan + monitoring pitch, then prepare sense check 2 on P1's published URL. **Launch only on explicit "launch" (3–4 PM)**
 - [ ] **4–6** QA every company: each signal's link opens, the snippet appears on the page, the status matches the rules
@@ -170,7 +170,7 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 | Risk | Fallback |
 |---|---|
 | Live applicant screening waits on slow job and review snapshots | Progressive saves: news shows first, jobs and reviews fill in. In the demo, screen a company whose snapshots were warmed up beforehand |
-| Pivoting on one tester | Monitoring stays (Portfolio tab). We only *added* a moment |
+| Pivoting on one tester | Monitoring stays (Borrowers tab). We only *added* a moment |
 | The LLM invents a snippet or mixes up companies with similar names | Snippet guard + `same_company=false` when unsure. QA'd by P4 |
 | A demo company comes up all green | P4 checks each one before 3 PM; the live-screen company is verified beforehand |
 | Base44 ↔ GitHub sync conflicts | Pull often; P1 merges; small PRs every ~45 minutes (per `CLAUDE.md`) |
@@ -216,5 +216,5 @@ Every person runs **one Claude Code session in this repo**. That's the harness. 
 | Indeed jobs dataset ID | | P3 |
 | Glassdoor reviews dataset ID | | P3 |
 | Snapshot time (trigger → ready) | | P3 |
-| Base44 app URL (editor / published) | | P1 |
-| Base44 repo layout (functions/entities folders) | | P1 |
+| Base44 app | "Early Warning", app id `6aca96c9744d6ba75bc4fabd` (not yet synced to GitHub: `git_remote_source: s3`) | P1 |
+| Base44 layout | entities `base44/entities/*.jsonc` · functions `base44/functions/<name>/entry.ts` (Deno, `npm:@base44/sdk`) · pages `src/pages/` (LoanBook, CompanyDetail) | P4 (checked 1:05) |
