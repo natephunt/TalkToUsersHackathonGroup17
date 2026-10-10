@@ -1,6 +1,7 @@
 // Devin tagger: one Devin session tags all of a borrower's articles, returned as structured output.
 // API: POST /v1/sessions, then poll GET /v1/sessions/{id} for structured_output. Takes minutes, so batch.
 import type { Borrower, Tag, Tagger } from "./types.ts";
+import { alignTags, type TagInput, tagPrompt } from "./tag_prompt.ts";
 
 const API = "https://api.devin.ai/v1";
 
@@ -26,22 +27,9 @@ const TAG_SCHEMA = {
   required: ["tags"],
 };
 
-export function devinPrompt(items: { text: string; url: string; hint: string }[], b: Borrower): string {
-  return `You are tagging news items for a bank credit officer. Do NOT write code, open PRs, or browse. Only read the items below and fill in the structured output.
-
-Company: ${b.name} | website: ${b.website_domain ?? "?"} | HQ: ${b.hq_city ?? "?"}, ${b.hq_state ?? "?"}
-
-For EACH item return {id, relevant, same_company, signal_type, severity, snippet}:
-- same_company: true only if the item is clearly about this company (not a different company with a similar name). If unsure, false.
-- signal_type: exec_departure (a senior executive leaves) or legal_layoffs (lawsuit, lien, WARN notice, layoffs, bankruptcy, closures). null if not relevant.
-- severity: exec_departure: CEO/CFO = strong, other senior roles = weak. legal_layoffs: WARN notice, bankruptcy, or a lawsuit by a lender/supplier = strong, others = weak.
-- snippet: copy ONE sentence or phrase EXACTLY, character for character, from the item text. Never paraphrase. Empty string if not relevant.
-
-Items (JSON):
-${JSON.stringify(items.map((it, id) => ({ id, text: it.text, url: it.url })), null, 1)}
-
-Set the structured output as soon as all ${items.length} items are tagged, then stop.`;
-}
+export const devinPrompt = (items: TagInput[], b: Borrower) =>
+  "Do NOT write code, open PRs, or browse. Only read the items below and fill in the structured output.\n\n" +
+  tagPrompt(items, b) + `\n\nSet the structured output as soon as all ${items.length} items are tagged, then stop.`;
 
 export function devinTagger(apiKey: string, opts = { pollMs: 10000, timeoutMs: 10 * 60000, maxAcu: 2 }): Tagger {
   const headers = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
@@ -71,10 +59,7 @@ export function devinTagger(apiKey: string, opts = { pollMs: 10000, timeoutMs: 1
         const s = await (await fetch(`${API}/sessions/${session_id}`, { headers })).json();
         const tags = s?.structured_output?.tags as (Tag & { id: number })[] | undefined;
         if (tags && tags.length >= items.length) {
-          return items.map((_, i) => {
-            const t = tags.find((x) => x.id === i);
-            return t ?? { relevant: false, same_company: false, signal_type: null, severity: null, snippet: "" };
-          });
+          return alignTags(items.length, tags);
         }
         if (s?.status_enum === "expired") throw new Error("Devin session expired before tagging finished");
       }

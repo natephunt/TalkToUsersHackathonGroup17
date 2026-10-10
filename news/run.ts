@@ -1,19 +1,21 @@
-// CLI: deno task news <company-id> [--live] [--tagger rules|devin]
+// CLI: deno task news <company-id> [--live] [--tagger gemini|rules|devin]
 // Without --live it replays dev/fixtures/<id>.json; --live calls Bright Data and re-records the fixture.
 import type { Borrower, Tagger } from "./types.ts";
 import { fetchBorrowerNews, type NewsBatch } from "./serp.ts";
 import { rulesTagger } from "./tag_rules.ts";
 import { devinTagger } from "./tag_devin.ts";
+import { geminiTagger } from "./tag_gemini.ts";
 import { newsSignalsFromBatches } from "./news_signals.ts";
 
 export const COMPANIES: Borrower[] = JSON.parse(await Deno.readTextFile("dev/companies.json"));
 const fixturePath = (id: string) => `dev/fixtures/${id}.json`;
 
 export function pickTagger(name: string): Tagger {
-  if (name !== "devin") return rulesTagger;
-  const key = Deno.env.get("DEVIN_API_KEY");
-  if (!key) throw new Error("DEVIN_API_KEY is not set in .env");
-  return devinTagger(key);
+  if (name === "rules") return rulesTagger;
+  const envName = name === "devin" ? "DEVIN_API_KEY" : "GEMINI_API_KEY";
+  const key = Deno.env.get(envName);
+  if (!key) throw new Error(`${envName} is not set in .env`);
+  return name === "devin" ? devinTagger(key) : geminiTagger(key);
 }
 
 export async function loadBatches(b: Borrower, live: boolean): Promise<NewsBatch[]> {
@@ -39,7 +41,7 @@ export async function fixtureDate(id: string): Promise<Date> {
 if (import.meta.main) {
   const id = Deno.args.find((a) => !a.startsWith("--")) ?? "redlobster";
   const live = Deno.args.includes("--live");
-  const taggerName = Deno.args[Deno.args.indexOf("--tagger") + 1] ?? "rules";
+  const taggerName = Deno.args.includes("--tagger") ? Deno.args[Deno.args.indexOf("--tagger") + 1] : "gemini";
   const b = COMPANIES.find((c) => c.id === id);
   if (!b) throw new Error(`unknown company ${id}; see dev/companies.json`);
 
@@ -47,7 +49,7 @@ if (import.meta.main) {
   const batches = await loadBatches(b, live);
   const t1 = performance.now();
   const today = live ? new Date() : await fixtureDate(id);
-  const { signals, trace } = await newsSignalsFromBatches(b, batches, pickTagger(Deno.args.includes("--tagger") ? taggerName : "rules"), today);
+  const { signals, trace } = await newsSignalsFromBatches(b, batches, pickTagger(taggerName), today);
   const t2 = performance.now();
 
   for (const r of trace) console.log(`${r.kept ? "KEEP" : "drop"}  ${r.query_type.padEnd(14)} ${(r.date ?? "?").padEnd(10)}  ${r.item.title.slice(0, 70).padEnd(70)}  ${r.reason}`);
