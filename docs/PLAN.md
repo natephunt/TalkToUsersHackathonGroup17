@@ -211,7 +211,7 @@ Every person runs **one Claude Code session in this repo**. That's the harness. 
 | What | Value | Found by |
 |---|---|---|
 | SERP zone | **`mcp_unlocker`**: Google News with `tbm=nws&brd_json=1` returns parsed JSON (verified 12:44) | P4 |
-| `news[]` field names | | P2 |
+| `news[]` field names | `title`, `link`, `source`, `description`, `date` (relative "1 month ago" or "Jul 9, 2026"), plus base64 `source_logo`/`image` (ignored). No results: no `news` key, `general.empty: true`. ~17–22 s per call (verified 1:20) | P2 |
 | LinkedIn jobs dataset ID | | P3 |
 | Indeed jobs dataset ID | | P3 |
 | Glassdoor reviews dataset ID | | P3 |

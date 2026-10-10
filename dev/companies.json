@@ -1,0 +1,4 @@
+[
+  { "id": "redlobster", "name": "Red Lobster", "website_domain": "redlobster.com", "hq_city": "Orlando", "hq_state": "FL", "industry": "Restaurants" },
+  { "id": "hooters", "name": "Hooters", "website_domain": "hooters.com", "hq_city": "Atlanta", "hq_state": "GA", "industry": "Restaurants" }
+]

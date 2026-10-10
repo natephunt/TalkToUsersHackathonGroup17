@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>News Signals Console</title>
+<style>
+  body { font: 14px/1.45 -apple-system, system-ui, sans-serif; margin: 24px; color: #1a1f2b; background: #f6f7f9; }
+  h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 24px 0 8px; }
+  .muted { color: #667; font-size: 12px; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; background: #fff; padding: 12px; border: 1px solid #dde; }
+  label { display: flex; flex-direction: column; font-size: 12px; color: #445; }
+  input, select, button { font: inherit; padding: 5px 8px; border: 1px solid #bbc; border-radius: 3px; }
+  button { background: #1d3a6b; color: #fff; border-color: #1d3a6b; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid #e1e3ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef0f4; font-size: 12px; }
+  .strong { color: #a11; font-weight: 600; } .weak { color: #a66b00; font-weight: 600; }
+  .keep { color: #176b2c; font-weight: 600; } .drop { color: #889; }
+  pre { background: #fff; border: 1px solid #dde; padding: 8px; max-height: 300px; overflow: auto; font-size: 12px; }
+  .err { color: #a11; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>News Signals Console</h1>
+<div class="muted">P2 local test page. Search (Bright Data) &rarr; tag &rarr; snippet guard &rarr; Signals. Not part of the app.</div>
+
+<form id="f">
+  <label>Company <select id="pick"><option value="">Custom...</option></select></label>
+  <label>Name <input id="name" required></label>
+  <label>Domain <input id="domain"></label>
+  <label>HQ city <input id="city"></label>
+  <label>Tagger <select id="tagger"><option value="rules">rules (instant)</option><option value="devin">devin (minutes)</option></select></label>
+  <label>Data <select id="live"><option value="0">saved fixture</option><option value="1">live Bright Data</option></select></label>
+  <button>Run</button>
+</form>
+<div id="status" class="muted" style="margin-top:8px"></div>
+
+<div id="out"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let companies = [];
+fetch("/companies").then((r) => r.json()).then((cs) => {
+  companies = cs;
+  for (const c of cs) $("pick").insertAdjacentHTML("beforeend", `<option value="${c.id}">${esc(c.name)}</option>`);
+  $("pick").value = cs[0]?.id ?? ""; fill();
+});
+function fill() {
+  const c = companies.find((x) => x.id === $("pick").value);
+  $("name").value = c?.name ?? ""; $("domain").value = c?.website_domain ?? ""; $("city").value = c?.hq_city ?? "";
+}
+$("pick").onchange = fill;
+
+$("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const id = $("pick").value;
+  const company = { id, name: $("name").value, website_domain: $("domain").value, hq_city: $("city").value };
+  $("status").textContent = "Running... (live search ~20 s, Devin tagging several minutes)";
+  $("out").innerHTML = "";
+  const t = Date.now();
+  const res = await fetch("/run", { method: "POST", body: JSON.stringify({ company, live: $("live").value === "1", tagger: $("tagger").value }) });
+  const d = await res.json();
+  if (d.error) { $("status").innerHTML = `<span class="err">Error: ${esc(d.error)}</span>`; return; }
+  $("status").textContent = `${d.live ? "Live" : "Fixture"} · tagger ${d.tagger} · search ${d.timings.search_s.toFixed(1)}s · tag ${d.timings.tag_s.toFixed(1)}s · total ${((Date.now() - t) / 1000).toFixed(1)}s`;
+
+  const sig = d.signals.map((s) => `<tr><td>${s.date}</td><td>${s.type}</td><td class="${s.severity}">${s.severity}</td>
+    <td><b>${esc(s.title)}</b><br>&ldquo;${esc(s.snippet)}&rdquo;</td><td><a href="${esc(s.source_url)}" target="_blank" rel="noopener">${esc(s.source_name)}</a></td></tr>`).join("");
+  const tr = d.trace.map((r) => `<tr><td class="${r.kept ? "keep" : "drop"}">${r.kept ? "KEEP" : "drop"}</td><td>${esc(r.reason)}</td><td>${r.query_type}</td><td>${r.date ?? esc(r.item.date)}</td>
+    <td><a href="${esc(r.item.link)}" target="_blank" rel="noopener">${esc(r.item.title)}</a><div class="muted">${esc(r.item.description)}</div></td>
+    <td><pre style="max-height:120px;margin:0">${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`).join("");
+  $("out").innerHTML = `
+    <h2>Signals (${d.signals.length})</h2>
+    <table><tr><th>Date</th><th>Type</th><th>Severity</th><th>Title / snippet</th><th>Source</th></tr>${sig || '<tr><td colspan="5" class="muted">No signals.</td></tr>'}</table>
+    <h2>Queries</h2><pre>${esc(JSON.stringify(d.queries, null, 1))}</pre>
+    <h2>Every article and why (${d.trace.length})</h2>
+    <table><tr><th></th><th>Reason</th><th>Query</th><th>Date</th><th>Article</th><th>Tag</th></tr>${tr}</table>`;
+};
+</script>
+</body>
+</html>
