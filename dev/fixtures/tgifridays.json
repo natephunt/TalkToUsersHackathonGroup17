@@ -1,0 +1,110 @@
+{
+  "recorded_at": "2026-10-10T20:22:54.263Z",
+  "batches": [
+    {
+      "type": "exec_departure",
+      "source": "News",
+      "query": "\"TGI Fridays\" (CEO OR CFO OR president OR founder) (resigns OR \"steps down\" OR departs)",
+      "items": [
+        {
+          "title": "Celsius COO Eric Hanson Departs as Company Restructures Leadership - News and Statistics",
+          "link": "https://www.indexbox.io/blog/celsius-holdings-coo-departs-amid-executive-reshuffle/",
+          "source": "IndexBox",
+          "description": "Celsius Holdings reshuffles its executive team, with COO Eric Hanson departing and new roles created for Tyler Bohannon and Tony Guilfoyle, as the company...",
+          "date": "Aug 12, 2026"
+        },
+        {
+          "title": "Influential restaurant designer Philip Harrison steps down after almost 50 years in the industry",
+          "link": "https://www.restaurantonline.co.uk/Article/2026/05/07/influential-restaurant-designer-philip-harrison-steps-down-after-almost-50-years-in-the-industry/",
+          "source": "restaurantonline.co.uk",
+          "description": "Philip Harrison is stepping back from day-to-day operations at his hospitality design firm Harrison after 37 years at the helm. Harrison has been designing...",
+          "date": "May 7, 2026"
+        },
+        {
+          "title": "PrideInn signs Franchise deal to bring TGI Fridays to Kenya",
+          "link": "https://www.the-star.co.ke/business/2026-06-02-prideinn-signs-franchise-deal-to-bring-tgi-fridays-to-kenya",
+          "source": "The Star, Kenya",
+          "description": "TGI Fridays Global President Phil Broad (left) and PrideInn Hotels, Resorts & Camps Managing Director Hasnain Noorani, (right) pose for a photograph...",
+          "date": "Jun 2, 2026"
+        }
+      ]
+    },
+    {
+      "type": "legal_layoffs",
+      "source": "Legal",
+      "query": "\"TGI Fridays\" (lawsuit OR sued OR lien OR \"WARN notice\" OR layoffs OR bankruptcy)",
+      "items": [
+        {
+          "title": "TGI Fridays liquidation plan approved as Chapter 11 winds down",
+          "link": "https://www.nrn.com/casual-dining/tgi-fridays-liquidation-plan-approved-as-chapter-11-winds-down",
+          "source": "Nation’s Restaurant News",
+          "description": "TGI Fridays' consensual liquidation plan has been approved by the U.S. Bankruptcy Court for the Northern District of Texas, marking a major milestone nearly...",
+          "date": "Jul 28, 2026"
+        },
+        {
+          "title": "TGI Fridays Store Closures: See a List of Locations That Have Lost the Most Restaurants Since Its Bankruptcy",
+          "link": "https://www.inc.com/fast-company-2/tgi-fridays-store-closures-locations-restaurants-bankruptcy/91386527",
+          "source": "Inc.com",
+          "description": "This article previously appeared on Fast Company authored by Christopher Zara. TGI Fridays is forging a path forward after a headline-grabbing bankruptcy...",
+          "date": "Aug 7, 2026"
+        },
+        {
+          "title": "TGI Friday’s Dining Chain Approved for Bankruptcy Wind-Down Plan",
+          "link": "https://news.bloomberglaw.com/bankruptcy-law/tgi-fridays-dining-chains-bankruptcy-wind-down-plan-approved",
+          "source": "Bloomberg Law News",
+          "description": "Casual dining chain operator TGI Friday's Inc. won approval of a bankruptcy wind-down plan, following sales of its corporate-owned restaurant locations,...",
+          "date": "Jul 23, 2026"
+        },
+        {
+          "title": "How TGI Fridays CEO Ray Blanchette plans to keep the 61-year-old brand ‘young and fresh’",
+          "link": "https://restaurantbusinessonline.com/leadership/how-tgi-fridays-ceo-ray-blanchette-plans-keep-61-year-old-brand-young-fresh",
+          "source": "Restaurant Business Magazine",
+          "description": "Two years after bankruptcy, he is betting on global expansion, digital engagement, and a people-first attitude to revive the casual-dining.",
+          "date": "Aug 11, 2026"
+        },
+        {
+          "title": "TGI Fridays Plan OK'd, Spirit Can Sell NYC Gates To JetBlue",
+          "link": "https://www.law360.com/bankruptcy-authority/articles/2506136/tgi-fridays-plan-ok-d-spirit-can-sell-nyc-gates-to-jetblue",
+          "source": "Law360",
+          "description": "",
+          "date": "Jul 27, 2026"
+        },
+        {
+          "title": "TGI Fridays opening new restaurants again. Are any coming to Ohio?",
+          "link": "https://www.beaconjournal.com/story/business/2026/10/06/tgi-fridays-bankruptcy-comeback-new-locations-ohio-us/92102856007/",
+          "source": "Akron Beacon Journal",
+          "description": "After bankruptcy and closures, TGI Fridays is expanding again with new restaurants planned.",
+          "date": "4 days ago"
+        },
+        {
+          "title": "TGI Fridays expanding. Will new restaurants open in Florida?",
+          "link": "https://www.palmbeachpost.com/story/entertainment/dining/2026/10/06/tgifridays-new-restaurants-florida-locations/92114900007/",
+          "source": "The Palm Beach Post",
+          "description": "After filing for bankruptcy in 2024, TGI Fridays is now expanding. Will it build new restaurants in Florida? That remains to be seen, although a company...",
+          "date": "4 days ago"
+        },
+        {
+          "title": "TGI Fridays signs first US franchise in over a decade",
+          "link": "https://www.restaurantdive.com/news/tgi-fridays-new-york-development-franchising-agreement/831745/",
+          "source": "Restaurant Dive",
+          "description": "The new development agreement could be an early sign of revival for the chain, which fell from 329 U.S. locations in 2020 to 71 this year.",
+          "date": "1 week ago"
+        },
+        {
+          "title": "TGI Fridays in Brooklyn, the Last of the Chain’s Locations in Ohio, Has Closed",
+          "link": "https://www.clevescene.com/food-drink/tgi-fridays-in-brooklyn-the-last-of-the-chains-locations-in-ohio-has-closed/",
+          "source": "Cleveland Scene",
+          "description": "Raise a loaded potato skin and bid your fond farewell to TGI Fridays in Brooklyn, which closed on August 31 after 27 years in business.",
+          "date": "1 month ago"
+        },
+        {
+          "title": "TGI Fridays Signs Its First US Franchise Development Deal in Over a Decade",
+          "link": "https://lexpress-franchise.com/en-us/news/tgi-fridays-signs-its-first-us-franchise-development-deal-in-over-a-decade/",
+          "source": "L’Express Franchise",
+          "description": "TGI Fridays filed for Chapter 11 bankruptcy in late 2024 and closed a net of over 200 US locations in two years, leaving the chain with just 69 domestic...",
+          "date": "1 week ago"
+        }
+      ]
+    }
+  ]
+}

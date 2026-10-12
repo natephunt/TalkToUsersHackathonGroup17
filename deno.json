@@ -1,0 +1,7 @@
+{
+  "tasks": {
+    "test": "deno test news/",
+    "news": "deno run --allow-net --allow-read --allow-write --allow-env --env-file=.env news/run.ts",
+    "console": "deno run --allow-net --allow-read --allow-write --allow-env --env-file=.env dev/news-console/server.ts"
+  }
+}

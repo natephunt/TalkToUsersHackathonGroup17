@@ -1,0 +1,26 @@
+[
+  {
+    "id": "redlobster",
+    "name": "Red Lobster",
+    "website_domain": "redlobster.com",
+    "hq_city": "Orlando",
+    "hq_state": "FL",
+    "industry": "Restaurants"
+  },
+  {
+    "id": "hooters",
+    "name": "Hooters",
+    "website_domain": "hooters.com",
+    "hq_city": "Atlanta",
+    "hq_state": "GA",
+    "industry": "Restaurants"
+  },
+  {
+    "id": "tgifridays",
+    "name": "TGI Fridays",
+    "website_domain": "tgifridays.com",
+    "hq_city": "Dallas",
+    "hq_state": "TX",
+    "industry": "Restaurants"
+  }
+]

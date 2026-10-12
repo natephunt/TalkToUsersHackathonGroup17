@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Signals Console</title>
+<style>
+  body { font: 14px/1.45 -apple-system, system-ui, sans-serif; margin: 24px; color: #1a1f2b; background: #f6f7f9; }
+  h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 20px 0 8px; }
+  .muted { color: #667; font-size: 12px; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; background: #fff; padding: 12px; border: 1px solid #dde; }
+  label { display: flex; flex-direction: column; font-size: 12px; color: #445; }
+  label.inline { flex-direction: row; align-items: center; gap: 4px; padding-bottom: 6px; }
+  input, select, button { font: inherit; padding: 5px 8px; border: 1px solid #bbc; border-radius: 3px; }
+  button.run { background: #1d3a6b; color: #fff; border-color: #1d3a6b; cursor: pointer; }
+
+  .diagram { margin-top: 16px; background: #fff; border: 1px solid #dde; padding: 14px; display: grid; grid-template-columns: 150px 1fr 170px; gap: 10px 14px; align-items: center; }
+  .lane { display: flex; align-items: stretch; gap: 0; }
+  .lane-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #556; margin-bottom: 4px; }
+  .box { flex: 1; min-width: 0; background: #fff; border: 1px solid #cfd4de; border-radius: 4px; padding: 8px 10px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .box:hover { border-color: #1d3a6b; } .box.active { border: 2px solid #1d3a6b; background: #f0f4fb; }
+  .box.off { opacity: .45; cursor: default; }
+  .box .t { font-size: 12px; font-weight: 600; } .box .n { font-size: 20px; font-weight: 600; line-height: 1.2; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 2px; margin-top: 3px; }
+  .bd { background: #e6eefc; color: #1d3a6b; } .ai { background: #f3e9fb; color: #5b2a86; } .code { background: #eaf3ec; color: #176b2c; } .p3 { background: #eee; color: #555; }
+  .arrow { align-self: center; padding: 0 4px; color: #99a; }
+  .input, .output { border: 1px solid #cfd4de; border-radius: 4px; padding: 10px; background: #fafbfc; }
+  .output .n { font-size: 26px; font-weight: 600; }
+  .join { color: #99a; font-size: 20px; text-align: center; }
+
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid #e1e3ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef0f4; font-size: 12px; }
+  .strong { color: #a11; font-weight: 600; } .weak { color: #a66b00; font-weight: 600; }
+  .keep { color: #176b2c; font-weight: 600; } .drop { color: #889; }
+  pre { background: #f8f9fb; border: 1px solid #e1e3ea; padding: 6px; margin: 0; font-size: 11px; white-space: pre-wrap; }
+  .err { color: #a11; font-weight: 600; }
+  details.activity { margin-top: 12px; background: #fff; border: 1px solid #dde; }
+  details.activity summary { padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  #log { font: 12px/1.5 ui-monospace, Menlo, monospace; max-height: 260px; overflow: auto; padding: 0 12px 10px; margin: 0; }
+  #log div { white-space: pre-wrap; } #log .t { color: #99a; } #log .linkedin { color: #5b2a86; } #log .news { color: #1d3a6b; }
+  #log .keep { color: #176b2c; } #log .drop { color: #889; }
+  .why { font-style: italic; color: #445; }
+</style>
+</head>
+<body>
+<h1>Signals Console</h1>
+<div class="muted">P2 local test page, not part of the app. The diagram is the whole process for one company; click any box to see its data.</div>
+
+<form id="f">
+  <label>Company <select id="pick"><option value="">Custom...</option></select></label>
+  <label>Name <input id="name" required></label>
+  <label>Domain <input id="domain"></label>
+  <label>HQ city <input id="city"></label>
+  <label>Analyze with <select id="tagger"><option value="gemini">Gemini (seconds)</option><option value="rules">keyword rules (instant)</option><option value="devin">Devin (minutes)</option></select></label>
+  <label>Data <select id="live"><option value="0">saved results (free)</option><option value="1">live Bright Data (uses credit)</option></select></label>
+  <label class="inline"><input type="checkbox" id="li" checked> LinkedIn check</label>
+  <button class="run">Run</button>
+</form>
+<div id="status" class="muted" style="margin-top:8px"></div>
+<details class="activity" id="act" open><summary>Activity: what it's doing, step by step</summary><div id="log"></div></details>
+<div id="diagram"></div>
+<div id="detail"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const link = (url, text) => url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(text)}</a>` : esc(text);
+const svc = { bd: "Bright Data", ai: "Gemini", code: "code", p3: "P3" };
+let companies = [], D = null, active = "signals";
+
+fetch("/companies").then((r) => r.json()).then((cs) => {
+  companies = cs;
+  for (const c of cs) $("pick").insertAdjacentHTML("beforeend", `<option value="${c.id}">${esc(c.name)}</option>`);
+  $("pick").value = cs[0]?.id ?? ""; fill();
+});
+function fill() {
+  const c = companies.find((x) => x.id === $("pick").value);
+  $("name").value = c?.name ?? ""; $("domain").value = c?.website_domain ?? ""; $("city").value = c?.hq_city ?? "";
+}
+$("pick").onchange = fill;
+
+const CLEAN = ["duplicate link", "older than 180 days"];
+const cleanDrop = (r) => !r.tag && (CLEAN.includes(r.reason) || r.reason.startsWith("unparsed date"));
+const L = () => (D.linkedin && !D.linkedin.error ? D.linkedin : null);
+
+const NEWS = [
+  { id: "crawl", t: "1. Crawl", s: "bd", sub: "Google News, 2 queries", n: () => D.news.batches.reduce((a, b) => a + b.items.length, 0) },
+  { id: "clean", t: "2. Clean", s: "code", sub: "dedupe, dates, 180 days", n: () => D.news.trace.filter((r) => !cleanDrop(r)).length },
+  { id: "analyze", t: "3. Analyze", s: "ai", sub: "relevant? severity?", n: () => D.news.trace.filter((r) => r.tag?.relevant).length },
+  { id: "verify", t: "4. Verify", s: "code", sub: "same company, exact quote", n: () => D.news.signals.length },
+];
+const LI = [
+  { id: "execs", t: "A. Find execs", s: "bd", s2: "ai", sub: "leadership search", n: () => L()?.run.execs.length },
+  { id: "profiles", t: "B. Find profiles", s: "bd", sub: "name + company search", n: () => L()?.run.profile_hits.filter((h) => h.url).length },
+  { id: "scrape", t: "C. Scrape profiles", s: "bd", sub: "LinkedIn people dataset", n: () => L()?.run.profiles.length },
+  { id: "check", t: "D. Check dates", s: "code", sub: "exec role ended <180 days", n: () => L()?.signals.length },
+];
+
+function box(st, off) {
+  const n = off ? "–" : (st.n() ?? "–");
+  const tags = [st.s, st.s2].filter(Boolean).map((k) => `<span class="tag ${k}">${svc[k]}</span>`).join(" ");
+  return `<button class="box ${st.id === active ? "active" : ""} ${off ? "off" : ""}" data-id="${off ? "" : st.id}">
+    <div class="t">${st.t}</div><div class="n">${n}</div><div class="muted">${esc(st.sub)}</div>${tags}</button>`;
+}
+const lane = (steps, off) => `<div class="lane">${steps.map((s, i) => (i ? '<div class="arrow">&rarr;</div>' : "") + box(s, off)).join("")}</div>`;
+
+function renderDiagram() {
+  const b = D.borrower, liOff = !L();
+  const counts = { strong: D.signals.filter((s) => s.severity === "strong").length, weak: D.signals.filter((s) => s.severity === "weak").length };
+  $("diagram").innerHTML = `<div class="diagram">
+    <div class="input"><div class="lane-label">Input: Borrower</div><b>${esc(b.name)}</b><div class="muted">${esc(b.website_domain || "")}<br>${esc(b.hq_city || "")}</div></div>
+    <div>
+      <div class="lane-label">News lane &middot; exec_departure + legal_layoffs</div>${lane(NEWS)}
+      <div class="lane-label" style="margin-top:10px">LinkedIn lane &middot; exec_departure ${D.linkedin?.error ? `<span class="err">(${esc(D.linkedin.error)})</span>` : liOff ? "(off)" : ""}</div>${lane(LI, liOff)}
+    </div>
+    <div>
+      <button class="box output ${active === "signals" ? "active" : ""}" data-id="signals" style="width:100%">
+        <div class="lane-label">Output: Signal[]</div><div class="n">${D.signals.length}</div>
+        <div class="muted"><span class="strong">${counts.strong} strong</span> &middot; <span class="weak">${counts.weak} weak</span></div>
+        <span class="tag code">saved to Base44</span></button>
+      <div class="join">&darr;</div>
+      <div class="box off" style="cursor:default"><div class="t">Status</div><div class="muted">scoreBorrower (not in P2)</div><span class="tag p3">P3</span></div>
+    </div></div>`;
+  for (const el of document.querySelectorAll(".box[data-id]")) if (el.dataset.id) el.onclick = () => { active = el.dataset.id; renderDiagram(); renderDetail(); };
+}
+
+const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr>${rows.join("") || `<tr><td colspan="${head.length}" class="muted">Nothing here.</td></tr>`}</table>`;
+
+function renderDetail() {
+  const n = D.news, l = L();
+  const views = {
+    crawl: () => n.batches.map((b) => `<h2>${esc(b.type)} &middot; ${b.items.length} results</h2><div class="muted">Query: ${esc(b.query)}</div>` +
+      table(["Raw date", "Source", "Title / description"], b.items.map((i) => `<tr><td>${esc(i.date)}</td><td>${esc(i.source)}</td><td>${link(i.link, i.title)}<div class="muted">${esc(i.description)}</div></td></tr>`))).join(""),
+    clean: () => `<h2>Clean: ${n.trace.length} in, ${NEWS[1].n()} passed to analysis</h2>` +
+      table(["Result", "Query", "Raw date", "Parsed", "Title"], n.trace.map((r) => `<tr><td class="${cleanDrop(r) ? "drop" : "keep"}">${cleanDrop(r) ? "drop: " + esc(r.reason) : "pass"}</td><td>${r.query_type}</td><td>${esc(r.item.date)}</td><td>${r.date ?? "?"}</td><td>${link(r.item.link, r.item.title)}</td></tr>`)),
+    analyze: () => `<h2>Analyze (${esc(D.tagger)}): ${n.trace.filter((r) => r.tag).length} tagged, ${NEWS[2].n()} relevant</h2>` +
+      table(["Relevant", "Why (model's reasoning)", "Same co.", "Type", "Severity", "Article", "Model output"], n.trace.filter((r) => r.tag).map((r) => `<tr><td class="${r.tag.relevant ? "keep" : "drop"}">${r.tag.relevant ? "yes" : "no"}</td><td class="why">${esc(r.tag.reason ?? "")}</td><td>${r.tag.same_company ? "yes" : "no"}</td><td>${esc(r.tag.signal_type ?? "")}</td><td class="${r.tag.severity ?? ""}">${esc(r.tag.severity ?? "")}</td><td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td><td><pre>${esc(JSON.stringify(r.tag, null, 1))}</pre></td></tr>`)),
+    verify: () => `<h2>Verify: kept only if same company and the quote is word for word in the article</h2>` +
+      table(["Result", "Quote from model", "Article"], n.trace.filter((r) => r.tag?.relevant).map((r) => `<tr><td class="${r.kept ? "keep" : "drop"}">${r.kept ? "KEEP" : "drop: " + esc(r.reason)}</td><td>&ldquo;${esc(r.tag.snippet)}&rdquo;</td><td>${link(r.item.link, r.item.title)}<div class="muted">${esc(r.item.description)}</div></td></tr>`)),
+    execs: () => `<h2>Find execs</h2><div class="muted">Search: ${esc(l.run.exec_query)} &rarr; Gemini lists execs, each backed by an exact quote from a result.</div>` +
+      table(["Name", "Title", "Quote", "Source"], l.run.execs.map((e) => `<tr><td><b>${esc(e.name)}</b></td><td>${esc(e.title)}</td><td>&ldquo;${esc(e.quote)}&rdquo;</td><td>${link(e.source_url, "result")}</td></tr>`)) +
+      `<h2>Search results (${l.run.exec_results.length})</h2>` + table(["Result"], l.run.exec_results.map((r) => `<tr><td>${link(r.link, r.title)}<div class="muted">${esc(r.description)}</div></td></tr>`)),
+    profiles: () => `<h2>Find profiles</h2>` + table(["Exec", "Search", "LinkedIn profile"], l.run.profile_hits.map((h) => `<tr><td>${esc(h.exec)}</td><td class="muted">${esc(h.query)}</td><td>${h.url ? link(h.url, h.url) : '<span class="drop">not found</span>'}</td></tr>`)),
+    scrape: () => `<h2>Scraped profiles (Bright Data LinkedIn people dataset)</h2>` + table(["Name", "Current employer", "Experience"], l.run.profiles.map((p) => `<tr><td>${link(p.url, p.name || p.url)}${p.error ? `<div class="err">${esc(p.error)}</div>` : ""}</td><td>${esc(p.current_company)}</td><td>${p.experience.length ? p.experience.map((x) => `${esc(x.title)} &middot; ${esc(x.company)} &middot; ${esc(x.start_date)} &ndash; ${esc(x.end_date || "Present")}`).join("<br>") : '<span class="muted">no work history on profile</span>'}</td></tr>`)),
+    check: () => `<h2>Check dates</h2><div class="muted">Signal only when an exec role at this company has an end date in the last 180 days. A different current employer alone is "unconfirmed".</div>` +
+      table(["Exec", "Result", "Detail", "Profile"], l.checks.map((c) => `<tr><td>${esc(c.exec)}</td><td class="${c.result === "departed" ? "strong" : "drop"}">${esc(c.result)}</td><td>${esc(c.detail)}</td><td>${link(c.profile_url, c.profile_url ? "LinkedIn" : "")}</td></tr>`)),
+    signals: () => `<h2>Signals (${D.signals.length}): what the credit officer sees</h2>` +
+      table(["Date", "Type", "Severity", "Title / snippet", "Source"], D.signals.map((s) => `<tr><td>${s.date}</td><td>${s.type}</td><td class="${s.severity}">${s.severity}</td><td><b>${esc(s.title)}</b><br>&ldquo;${esc(s.snippet)}&rdquo;</td><td>${link(s.source_url, s.source_name)}</td></tr>`)),
+  };
+  $("detail").innerHTML = (views[active] ?? views.signals)();
+}
+
+function addLog(e) {
+  const cls = e.msg.startsWith("KEEP") ? "keep" : e.msg.startsWith("drop") ? "drop" : "";
+  $("log").insertAdjacentHTML("beforeend", `<div><span class="t">${e.t.toFixed(1).padStart(5)}s</span> <span class="${e.lane}">[${e.lane}]</span> <span class="${cls}">${esc(e.msg)}</span></div>`);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+$("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const company = { id: $("pick").value, name: $("name").value, website_domain: $("domain").value, hq_city: $("city").value };
+  $("diagram").innerHTML = $("detail").innerHTML = $("log").innerHTML = "";
+  $("act").open = true;
+  const t = Date.now();
+  const tick = setInterval(() => { $("status").textContent = `Running... ${((Date.now() - t) / 1000).toFixed(0)}s (live: news ~20 s, LinkedIn ~30-60 s)`; }, 250);
+  try {
+    const res = await fetch("/run", { method: "POST", body: JSON.stringify({ company, live: $("live").value === "1", tagger: $("tagger").value, linkedin: $("li").checked }) });
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", d = null;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const ev = JSON.parse(buf.slice(0, i)); buf = buf.slice(i + 1);
+        if (ev.type === "log") addLog(ev);
+        else if (ev.type === "error") throw new Error(ev.error);
+        else if (ev.type === "result") d = ev;
+      }
+    }
+    clearInterval(tick);
+    if (!d) throw new Error("no result");
+    const li = d.linkedin ? ` · LinkedIn ${d.linkedin.live ? "live" : "saved"} ${d.linkedin.seconds.toFixed(1)}s` : "";
+    $("status").textContent = `Done in ${((Date.now() - t) / 1000).toFixed(1)}s · news ${d.live ? "live" : "saved"}: crawl ${d.news.timings.crawl_s.toFixed(1)}s, analyze ${d.news.timings.analyze_s.toFixed(1)}s${li}`;
+    D = d; active = "signals"; renderDiagram(); renderDetail();
+  } catch (err) {
+    clearInterval(tick);
+    $("status").innerHTML = `<span class="err">Error: ${esc(err.message)}</span>`;
+  }
+};
+</script>
+</body>
+</html>

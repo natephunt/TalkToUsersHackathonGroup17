@@ -127,6 +127,7 @@ Put names here: **P1** ____ · **P2** ____ · **P3** ____ · **P4** ____
 - [ ] **by 2:30** `tagItem` reusable by P3 (review text in, same JSON out)
 - [ ] **after 3 (stretch) Stacking check feasibility, 20 min:** can we find **new lenders or liens** (UCC filings, lender lawsuits, merchant cash advances) for a test company through Bright Data, either from news or a state UCC search page? If yes, propose a signal type `lender_liens` (additive contract change; tell the team). If no, P4 puts it in the pitch as the next step
 - [ ] **after 3** Timeouts/retry, cache tags by `source_url` so refresh doesn't re-tag
+- [ ] **future (needs team OK, new signal type)** **LinkedIn people check** via Bright Data LinkedIn company + people datasets: (a) a CEO/CFO/founder's profile shows a new employer = executive left, often before any news; (b) company employee count falling over time = headcount drop. Overlaps `exec_departure`, so dedupe against news
 
 ### P3: Jobs & reviews (`jobs/`): Web Scraper API + scoring
 - [ ] **now** `scoreBorrower` + why line first. It's pure code and testable without any API, so write the test cases from §2 first
@@ -211,7 +212,7 @@ Every person runs **one Claude Code session in this repo**. That's the harness. 
 | What | Value | Found by |
 |---|---|---|
 | SERP zone | **`mcp_unlocker`**: Google News with `tbm=nws&brd_json=1` returns parsed JSON (verified 12:44) | P4 |
-| `news[]` field names | | P2 |
+| `news[]` field names | `title`, `link`, `source`, `description`, `date` (relative "1 month ago" or "Jul 9, 2026"), plus base64 `source_logo`/`image` (ignored). No results: no `news` key, `general.empty: true`. ~17–22 s per call (verified 1:20) | P2 |
 | LinkedIn jobs dataset ID | | P3 |
 | Indeed jobs dataset ID | | P3 |
 | Glassdoor reviews dataset ID | | P3 |
